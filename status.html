@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Status – Notify</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #030305;
+      color: #F0F0FF;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 1.8rem;
+      max-width: 420px;
+      width: 100%;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .row:last-child { border: none; }
+    .pill {
+      background: rgba(0,217,126,0.1);
+      border-radius: 100px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.8rem;
+      display: inline-block;
+    }
+    .expired { background: rgba(255,94,122,0.1); color: #FF5E7A; }
+    a { color: #6c63ff; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="card" id="statusCard">
+  <h2>Account Status</h2>
+  <div id="content">Loading...</div>
+</div>
+<script>
+  // ===== CONFIGURATION (Public) =====
+  const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";   // replace
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                // replace
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const params = new URLSearchParams(window.location.search);
+  const ucp_id = params.get("ucp_id");
+
+  if (!ucp_id) {
+    document.getElementById("content").innerHTML = "<p>Missing UCP ID.</p>";
+  } else {
+    supabase
+      .from("students")
+      .select("ucp_id, ntfy_topic, trial_ends, is_active, is_paid, last_checked")
+      .eq("ucp_id", ucp_id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          document.getElementById("content").innerHTML = "<p>Student not found.</p>";
+          return;
+        }
+        const now = new Date();
+        const trialEnds = new Date(data.trial_ends);
+        const expired = !data.is_paid && now > trialEnds;
+        let daysLeft = Math.max(0, Math.ceil((trialEnds - now) / 86400000));
+        let statusHtml = `
+          <div class="row"><span>UCP ID</span><strong>${data.ucp_id}</strong></div>
+          <div class="row"><span>ntfy Topic</span><code style="font-size:0.8rem">${data.ntfy_topic}</code></div>
+          <div class="row"><span>Status</span>`;
+        if (!data.is_active) statusHtml += `<span class="pill">Inactive</span>`;
+        else if (expired) statusHtml += `<span class="pill expired">Trial expired</span>`;
+        else if (data.is_paid) statusHtml += `<span class="pill">Active (Paid)</span>`;
+        else statusHtml += `<span class="pill">Trial – ${daysLeft} day${daysLeft !== 1 ? 's' : ''} left</span>`;
+        statusHtml += `</div>
+          <div class="row"><span>Last checked</span><span>${data.last_checked ? new Date(data.last_checked).toLocaleString() : 'Not yet'}</span></div>
+          <div class="row"><span>Trial ends</span><span>${trialEnds.toLocaleDateString()}</span></div>`;
+        if (expired) {
+          statusHtml += `<div class="row" style="margin-top:1rem"><span>📞 WhatsApp 03160414799 to renew – Rs.199/month</span></div>`;
+        }
+        document.getElementById("content").innerHTML = statusHtml;
+      });
+  }
+</script>
+</body>
+</html>

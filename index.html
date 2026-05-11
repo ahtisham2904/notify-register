@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – Notify</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #030305;
+      color: #F0F0FF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+    }
+    .aurora { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(100px); }
+    .orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, #4F46E5 0%, transparent 70%); top: -20%; left: -10%; opacity: 0.14; }
+    .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, #EC4899 0%, transparent 70%); bottom: 0%; right: 0%; opacity: 0.1; }
+    .grid-overlay {
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 64px 64px;
+      pointer-events: none; z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 24px;
+      padding: 2.75rem 2.5rem;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+    }
+    .card h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 0.35rem; }
+    .card .subtitle { color: rgba(240,240,255,0.42); font-size: 0.88rem; margin-bottom: 2rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 0.45rem; }
+    input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 12px;
+      padding: 0.85rem 1.1rem;
+      color: #F0F0FF;
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+    input:focus { border-color: rgba(123,111,255,0.6); background: rgba(123,111,255,0.04); }
+    button {
+      width: 100%;
+      background: linear-gradient(135deg, #7B6FFF, #9B6FFF);
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 0.95rem;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      transition: all 0.2s;
+      margin-top: 0.5rem;
+    }
+    button:hover { transform: translateY(-2px); }
+    .flash-error {
+      background: rgba(255,94,122,0.08);
+      border: 1px solid rgba(255,94,122,0.25);
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      font-size: 0.85rem;
+      color: #FF5E7A;
+      margin-bottom: 1.25rem;
+    }
+    .security-note {
+      background: rgba(123,111,255,0.06);
+      border: 1px solid rgba(123,111,255,0.18);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      font-size: 0.8rem;
+      color: rgba(200,195,255,0.85);
+      margin-bottom: 1.75rem;
+    }
+  </style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><div class="orb orb-1"></div><div class="orb orb-2"></div></div>
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<div class="card">
+  <h1>Create your alert</h1>
+  <p class="subtitle">7-day free trial — no payment needed</p>
+  <div id="message"></div>
+  <div class="security-note">🔐 Your password is encrypted with AES-256 and never stored in plain text.</div>
+  <form id="registerForm">
+    <div class="form-group">
+      <label>UCP Student ID</label>
+      <input type="text" id="ucp_id" placeholder="L1F24BSSE0066" required style="text-transform:uppercase">
+    </div>
+    <div class="form-group">
+      <label>UCP Portal Password</label>
+      <input type="password" id="password" placeholder="Your Microsoft password" required>
+    </div>
+    <button type="submit">Start My Free Trial</button>
+  </form>
+</div>
+
+<script>
+  // ===== CONFIGURATION (Public) =====
+  const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";   // replace
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                // replace
+
+  document.getElementById("registerForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msgDiv = document.getElementById("message");
+    msgDiv.innerHTML = "";
+
+    const ucp_id = document.getElementById("ucp_id").value.trim().toUpperCase();
+    const password = document.getElementById("password").value;
+
+    if (!ucp_id || !password) {
+      msgDiv.innerHTML = '<div class="flash-error">UCP ID and password are required</div>';
+      return;
+    }
+
+    // Basic format validation
+    if (!/^[A-Z]\d[A-Z]\d{2}[A-Z]{2,4}\d{4}$/.test(ucp_id)) {
+      msgDiv.innerHTML = '<div class="flash-error">Invalid UCP ID format. Example: L1F24BSSE0066</div>';
+      return;
+    }
+
+    const submitBtn = document.querySelector('button');
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Registering...";
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ ucp_id, password })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+
+      // Success – redirect to success page with parameters
+      window.location.href = `success.html?ucp_id=${encodeURIComponent(data.ucp_id)}&ntfy=${encodeURIComponent(data.ntfy_topic)}`;
+    } catch (err) {
+      msgDiv.innerHTML = `<div class="flash-error">${err.message}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Start My Free Trial";
+    }
+  });
+</script>
+</body>
+</html>
